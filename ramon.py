@@ -3,8 +3,9 @@
 #
 # Simple Bot to provide basic BTC market information
 
-import os
+import json
 import requests
+import os
 from telegram import (ReplyKeyboardRemove)
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, ConversationHandler)
 
@@ -18,11 +19,33 @@ logger = logging.getLogger(__name__)
 
 ALERT, TODO_ADD_MORE = range(2)
 
+BID, BID_SIZE, ASK, ASK_SIZE, DAILY_CHANGE, DAILY_CHANGE_PERC, LAST_PRICE, VOLUME, HIGH, LOW = range(10)
+
 
 def btc(bot, update):
     r = requests.get('https://api.bitfinex.com/v2/ticker/tBTCUSD')
 
-    message = 'BTC.\n\n'+r.text
+    btc_data = json.loads(r.text)
+
+    price = btc_data[LAST_PRICE]
+    daily_change = btc_data[DAILY_CHANGE]
+    daily_change_perc = 100*btc_data[DAILY_CHANGE_PERC]
+    low = btc_data[LOW]
+    high = btc_data[HIGH]
+
+    change = 'Desde ayer el precio '
+    emoji = '\xF0\x9F\x93\x88'
+
+    if daily_change > 0:
+        change += 'subió'
+    else:
+        change += 'bajó'
+        emoji = '\xF0\x9F\x93\x89'
+
+    message = ('Precio actual\n${price:,.2f}\n\n'
+               'Rango de hoy\n${low:,.2f} - ${high:,.2f}\n\n'
+               '{change}\n${d:,.2f} {dp:,.2f}% {emoji}\n'
+               .format(price=price, low=low, high=high, d=daily_change, dp=daily_change_perc, change=change, emoji=emoji))
 
     bot.send_message(chat_id=update.message.chat_id, text=message)
 
